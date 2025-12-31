@@ -1,44 +1,38 @@
 import logging
 from datetime import datetime, timezone, timedelta
 
-log = logging.getLogger(__name__)
 
-# Define IST timezone (UTC +5:30)
+log = logging.getLogger(__name__)
 IST = timezone(timedelta(hours=5, minutes=30))
 
 def transform_weather(**context):
-    """
-    Transforms raw OpenWeatherMap JSON
-    into analytics-ready structure
-    """
-
     ti = context["ti"]
-    raw = ti.xcom_pull(
-        key="raw_weather",
+    raw_list = ti.xcom_pull(
+        key="raw_weather_list",
         task_ids="extract_weather"
     )
 
-    cleaned = {
-        "city": raw["name"],
-        "country": raw["sys"]["country"],
-        "temperature": raw["main"]["temp"],
-        "feels_like": raw["main"]["feels_like"],
-        "humidity": raw["main"]["humidity"],
-        "pressure": raw["main"]["pressure"],
-        "wind_speed": raw["wind"]["speed"],
-        "weather_main": raw["weather"][0]["main"],
-        "weather_desc": raw["weather"][0]["description"],
+    cleaned_rows = []
 
-        #convert IST datetime → STRING (XCom-safe)
-        "timestamp_ist": datetime.fromtimestamp(
-            raw["dt"],
-            tz=timezone.utc
-        ).astimezone(IST).isoformat()
-    }
+    for raw in raw_list:
+        cleaned_rows.append({
+            "city": raw["name"],
+            "country": raw["sys"]["country"],
+            "temperature": raw["main"]["temp"],
+            "feels_like": raw["main"]["feels_like"],
+            "humidity": raw["main"]["humidity"],
+            "pressure": raw["main"]["pressure"],
+            "wind_speed": raw["wind"]["speed"],
+            "weather_main": raw["weather"][0]["main"],
+            "weather_desc": raw["weather"][0]["description"],
+            "timestamp_ist": datetime.fromtimestamp(
+                raw["dt"], tz=timezone.utc
+            ).astimezone(IST).isoformat()
+        })
 
     ti.xcom_push(
-        key="cleaned_weather",
-        value=cleaned
+        key="cleaned_weather_list",
+        value=cleaned_rows
     )
 
-    log.info("Weather data transformed successfully (IST as string)")
+    log.info(f"Transformed {len(cleaned_rows)} weather records")

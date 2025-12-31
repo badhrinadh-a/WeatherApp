@@ -1,3 +1,4 @@
 .env
 secrets/airflow.env
 secrets/weather.env
+airflow_variables.json
