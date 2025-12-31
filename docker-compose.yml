@@ -1,0 +1,46 @@
+services:
+  # ---------------------------------------------------------
+  # PostgreSQL – Weather DB ONLY
+  # ---------------------------------------------------------
+  postgres16:
+    image: postgres:16
+    container_name: postgres16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres16-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      retries: 1
+
+  # ---------------------------------------------------------
+  # Airflow – Standalone
+  # ---------------------------------------------------------
+  airflow:
+    image: apache/airflow:3.1.5
+    container_name: airflow
+    command: airflow standalone
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - airflow-metadata:/opt/airflow
+    env_file:
+      - ./secrets/airflow.env
+      - ./secrets/weather.env
+
+    depends_on:
+      postgres16:
+        condition: service_healthy
+
+# Persistent Volumes
+volumes:
+  postgres16-data:
+  airflow-metadata:
